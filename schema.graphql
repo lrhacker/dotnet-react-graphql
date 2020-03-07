@@ -1,0 +1,10 @@
+type Query {
+  weatherForecasts: [WeatherForecast!]!
+}
+
+type WeatherForecast {
+  date: String!
+  temperatureC: Int!
+  temperatureF: Int!
+  summary: String!
+}

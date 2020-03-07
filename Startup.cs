@@ -1,3 +1,8 @@
+using System.IO;
+using System.Reflection;
+using HotChocolate;
+using HotChocolate.AspNetCore;
+using HotChocolate.Execution.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -5,6 +10,8 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SampleApp.Models;
+using SampleApp.Resolvers;
 
 namespace SampleApp
 {
@@ -28,6 +35,27 @@ namespace SampleApp
             {
                 configuration.RootPath = "ClientApp/build";
             });
+
+            services.AddGraphQL(sp =>
+                {
+                    var schema = SchemaBuilder.New()
+                        .AddDocumentFromString(this.ReadGraphQLSchema())
+                        // This schema type does not have a model counterpart, so just bind
+                        // the resolver directly to the type name as it appears in schema.graphql
+                        .BindResolver<QueryResolver>(c => c.To("Query"))
+                        // This schema type does have a corresponding data model, so bind the
+                        // resolver to the model that matches the schema.graphql type name
+                        .BindResolver<WeatherForecastResolver>(c => c.To<WeatherForecast>())
+                        .AddServices(sp)
+                        .Create();
+
+                    schema.MakeExecutable(new QueryExecutionOptions
+                    {
+                        IncludeExceptionDetails = true,
+                    });
+
+                    return schema;
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -50,12 +78,7 @@ namespace SampleApp
 
             app.UseRouting();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller}/{action=Index}/{id?}");
-            });
+            app.UseGraphQL("/graphql");
 
             app.UseSpa(spa =>
             {
@@ -66,6 +89,25 @@ namespace SampleApp
                     spa.UseReactDevelopmentServer(npmScript: "start");
                 }
             });
+        }
+
+        private string ReadGraphQLSchema()
+        {
+            string schema;
+            using (var schemaStream = Assembly.
+                GetExecutingAssembly().
+                GetManifestResourceStream("SampleApp.schema.graphql"))
+            {
+                if (schemaStream == null)
+                {
+                    throw new FileNotFoundException("Unable to load GraphQL schema");
+                }
+
+                using var reader = new StreamReader(schemaStream);
+                schema = reader.ReadToEnd();
+            }
+
+            return schema;
         }
     }
 }

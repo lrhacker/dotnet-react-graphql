@@ -10,7 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="HotChocolate" Version="10.3.6" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="10.3.6" />
     <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="3.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="schema.graphql" />
   </ItemGroup>
 
   <ItemGroup>
